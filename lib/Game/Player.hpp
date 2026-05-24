@@ -1,21 +1,9 @@
 #pragma once
+#include "Config.hpp"
 
-class Player
-{
-private:
-    int x;
-    int y;
-    int score;
-    int lives;
+struct Player {
+    int shieldAngle = 0;
 
-public:
-    /**
-     * @brief Increases the player's score by a predefined amount.
-     */
-    void increaseScore();
-    
-    /**
-     * @brief Decreases the player's lives by one.
-     */
-    void decreaseLives();
+    int hp = C_PLAYER_LIVES_MAX;
+    int score = 0;
 };

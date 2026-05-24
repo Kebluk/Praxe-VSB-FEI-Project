@@ -17,8 +17,9 @@ public:
 
     /**
      * @brief Tests the RGB LED by gradually increasing its brightness of white.
+     * @return true if the test is complete, false otherwise.
      */
-    void test();
+    bool test();
     
     /**
      * @brief Set the color of the RGB LED by specifying the intensity of red, green, and blue components.

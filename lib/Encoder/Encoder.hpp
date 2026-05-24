@@ -5,7 +5,8 @@ class Encoder
 {
     public:
         void init();
-        void test();
+        bool test();
+        long readEncoder();
     private:
         AiEsp32RotaryEncoder encoder;
         static Encoder* instance;  // Static pointer for ISR access

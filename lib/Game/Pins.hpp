@@ -13,7 +13,7 @@ constexpr int RGB_G = 27;
 constexpr int RGB_B = 26;
 
 // Buttons
-constexpr int BUT_1 = 16;
+constexpr int BTN_1 = 16;
 
 // Rotary Encoder
 constexpr int ENC_CLK = 32;  // Amount of steps

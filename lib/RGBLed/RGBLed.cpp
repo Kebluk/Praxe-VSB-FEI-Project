@@ -13,10 +13,10 @@ void RGBLed::init(int redPin, int greenPin, int bluePin)
     pinMode(bluePin, OUTPUT);
 }
 
-void RGBLed::test()
+bool RGBLed::test()
 {
     if (testLED > 3)
-        return;
+        return true;
 
     switch (testLED)
     {
@@ -49,7 +49,9 @@ void RGBLed::test()
         setColor(0, 0, 0); // Turn off the LED
         testLED++;
         Serial.println("RGB LED initialized");
+        return true;
     }
+    return false;
 }
 
 void RGBLed::setColor(uint8_t red, uint8_t green, uint8_t blue)
