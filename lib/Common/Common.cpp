@@ -1,14 +1,14 @@
 #include "Common.hpp"
 #include <Arduino.h>
 
-bool timeElapsed(unsigned long &startTime, unsigned long interval) {
-    if (startTime == 0) {
-        startTime = millis();
+bool timeElapsed(unsigned long &lastTime, unsigned long interval) {
+    if (lastTime == 0) {
+        lastTime = millis();
         return false;
     }
 
-    if (millis() - startTime >= interval) {
-        startTime = millis();
+    if (millis() - lastTime >= interval) {
+        lastTime = millis();
         return true;
     }
 

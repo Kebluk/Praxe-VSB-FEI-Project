@@ -16,7 +16,6 @@ public:
     void drawShield(int angle);
     void drawBullets(Bullet bullets[]);
     void drawMenu();
-    void drawWin();
     void drawGameOver(int score);
     /**
      * @brief Draws a shield around the player with a given angle.

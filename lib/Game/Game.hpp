@@ -6,6 +6,12 @@
 #include "Bullet.hpp"
 #include "Config.hpp"
 
+enum GameState {
+    MENU,
+    PLAYING,
+    GAME_OVER
+};
+
 class Game
 {
 public:
@@ -30,9 +36,13 @@ private:
     bool rgbLedTested = false;
     bool testing = true;
     unsigned long lastBulletSpawnTime = 0;
+    unsigned long lastPrintTime = 0;
+    unsigned long lastButtonPress = 0;
+    int gameState = MENU;
     void getInput();
     void spawnBullet();
     void updateBullets();
     void checkCollisions();
     void render();
+    void resetGame();
 };

@@ -5,6 +5,41 @@
 #include "Common.hpp"
 #include <Arduino.h>
 
+static uint16_t getLineWidth(Adafruit_SSD1306 &display, const char *text)
+{
+    int16_t x1 = 0;
+    int16_t y1 = 0;
+    uint16_t w = 0;
+    uint16_t h = 0;
+    display.getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
+    return w;
+}
+
+static void drawCenteredLineAtY(Adafruit_SSD1306 &display, const char *text, int16_t y)
+{
+    uint16_t lineWidth = getLineWidth(display, text);
+    int16_t startX = (display.width() - (int16_t)lineWidth) / 2;
+    display.setCursor(startX, y);
+    display.print(text);
+}
+
+static void drawCenteredLines(Adafruit_SSD1306 &display, const char *const *lines, int lineCount, int textSize)
+{
+    int16_t displayWidth = display.width();
+    int16_t displayHeight = display.height();
+    int16_t lineHeight = 8 * textSize;
+    int16_t totalHeight = lineCount * lineHeight;
+    int16_t startY = (displayHeight - totalHeight) / 2;
+
+    for (int i = 0; i < lineCount; i++)
+    {
+        uint16_t lineWidth = getLineWidth(display, lines[i]);
+        int16_t startX = (displayWidth - (int16_t)lineWidth) / 2;
+        display.setCursor(startX, startY + i * lineHeight);
+        display.print(lines[i]);
+    }
+}
+
 void OLED::init()
 {
     if (!displayObj.begin(SSD1306_SWITCHCAPVCC, 0x3C))
@@ -48,41 +83,29 @@ void OLED::display()
 void OLED::drawMenu()
 {
     displayObj.clearDisplay();
-
-    displayObj.drawPixel(0, 0, SSD1306_WHITE);
-    displayObj.drawPixel(5, 63, SSD1306_WHITE);
-    displayObj.drawPixel(10, 62, SSD1306_WHITE);
-    displayObj.drawPixel(127, 0, SSD1306_WHITE);
-    displayObj.drawPixel(127, 63, SSD1306_WHITE);
-
-    displayObj.drawRect(0, 0, 128, 64, SSD1306_WHITE);
-    displayObj.drawRect(1, 1, 126, 62, SSD1306_BLACK);
-
-    // Player
-    displayObj.fillRect(63, 31, 2, 2, SSD1306_WHITE);
-
-    displayObj.drawCircle(63, 31, 11, SSD1306_WHITE);
-    displayObj.drawCircle(64, 31, 11, SSD1306_WHITE);
-    displayObj.drawCircle(63, 32, 11, SSD1306_WHITE);
-    displayObj.drawCircle(64, 32, 11, SSD1306_WHITE);
-
-    displayObj.display();
-
-    // display.drawPixel(64, 32, SSD1306_WHITE);
-    /*displayObj.drawPixel(127, 0, SSD1306_WHITE);
-    displayObj.drawPixel(0, 62, SSD1306_WHITE);*/
-
-    /*Serial.println("Width: " + String(displayObj.width()));
-    Serial.println("Height: " + String(displayObj.height()));
-
-    displayObj.drawPixel(64, 32, SSD1306_WHITE);
-
-    displayObj.drawCircle(64, 32, 20, SSD1306_WHITE);*/
-
-    /*displayObj.setTextSize(1);
+    int textSize = 1;
+    displayObj.setTextSize(textSize);
     displayObj.setTextColor(SSD1306_WHITE);
-    displayObj.setCursor(0, 10);
-    displayObj.println("Press button to start");*/
+    const char *lines[] = {"Press button", "to start"};
+    drawCenteredLines(displayObj, lines, 2, textSize);
+    displayObj.display();
+}
+
+void OLED::drawGameOver(int score)
+{
+    displayObj.clearDisplay();
+    int textSize = 1;
+    displayObj.setTextSize(textSize);
+    displayObj.setTextColor(SSD1306_WHITE);
+    String scoreLine = "Score: " + String(score);
+    const char *lines[] = {"Game Over", scoreLine.c_str()};
+    drawCenteredLines(displayObj, lines, 2, textSize);
+    int16_t lineHeight = 8 * textSize;
+    int16_t bottomStartY = displayObj.height() - (2 * lineHeight);
+    drawCenteredLineAtY(displayObj, "Press button", bottomStartY);
+    drawCenteredLineAtY(displayObj, "to restart", bottomStartY + lineHeight);
+    displayObj.display();
+    delay(500);
 }
 
 void OLED::drawPlayer()
@@ -114,29 +137,6 @@ void OLED::drawShield(int angle)
 
         first = false;
     }
-    /*
-    int cx = C_PLAYER_X;
-    int cy = C_PLAYER_Y;
-
-    int prevX = 0;
-    int prevY = 0;
-
-    for (int a = -C_SHIELD_HALF_ANGLE; a <= C_SHIELD_HALF_ANGLE; a += 3)
-    {
-
-        float rad = (angle + a) * DEG_TO_RAD;
-
-        int x = cx + cos(rad) * C_SHIELD_RADIUS;
-        int y = cy + sin(rad) * C_SHIELD_RADIUS;
-
-        if (a != -C_SHIELD_HALF_ANGLE)
-        {
-            displayObj.drawLine(prevX, prevY, x, y, SSD1306_WHITE);
-        }
-
-        prevX = x;
-        prevY = y;
-    }*/
 }
 
 void OLED::drawBullets(Bullet bullets[])
@@ -146,6 +146,8 @@ void OLED::drawBullets(Bullet bullets[])
         if (!bullets[i].active)
             continue;
 
-        displayObj.drawPixel((int)bullets[i].x, (int)bullets[i].y, SSD1306_WHITE);
+        int x = (int)bullets[i].x;
+        int y = (int)bullets[i].y;
+        displayObj.fillRect(x, y, 2, 2, SSD1306_WHITE);
     }
 }

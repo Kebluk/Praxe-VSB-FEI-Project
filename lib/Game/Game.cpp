@@ -39,32 +39,80 @@ void Game::update()
         }
     }
 
-    Serial.println("Lives: " + String(player.hp) + " Score: " + String(player.score));
-    getInput();
-
-    if (timeElapsed(lastBulletSpawnTime, random(C_BULLET_SPAWN_MIN_MS, C_BULLET_SPAWN_MAX_MS)))
+    switch (gameState)
     {
-        spawnBullet();
-        lastBulletSpawnTime = millis();
+    case MENU:
+        oled.drawMenu();
+        if (digitalRead(BTN_1) == HIGH)
+        {
+            gameState = PLAYING;
+        }
+        break;
+    case PLAYING:
+        if (player.hp == C_PLAYER_LIVES_MAX)
+        {
+            led.setColor(0, 255, 0); // zelená
+        }
+        if (player.hp <= 0)
+        {
+            led.setColor(0, 0, 0); // vypnuto
+            gameState = GAME_OVER;
+            return;
+        }
+
+        getInput();
+
+        if (timeElapsed(lastPrintTime, 250))
+            Serial.println("Lives: " + String(player.hp) + " Score: " + String(player.score) + " Shield Angle: " + String(player.shieldAngle));
+
+        if (timeElapsed(lastBulletSpawnTime, random(C_BULLET_SPAWN_MIN_MS, C_BULLET_SPAWN_MAX_MS)))
+        {
+            spawnBullet();
+        }
+
+        updateBullets();
+
+        checkCollisions();
+
+        render();
+        break;
+    case GAME_OVER:
+        oled.drawGameOver(player.score);
+        if (digitalRead(BTN_1) == HIGH && (millis() - lastButtonPress > 50)) // 50ms debounce
+        {
+            lastButtonPress = millis();
+            resetGame();
+            gameState = MENU;
+        }
+        break;
     }
-
-    updateBullets();
-
-    checkCollisions();
-
-    render();
 }
 
 void Game::getInput()
 {
-    player.shieldAngle = encoder.readEncoder() * 10;
-    Serial.print("Shield Angle: ");
-    Serial.println(player.shieldAngle);
+    player.shieldAngle = encoder.readEncoder();
+}
+
+void Game::resetGame()
+{
+    player.hp = C_PLAYER_LIVES_MAX;
+    player.score = 0;
+    player.shieldAngle = 0;
+    lastBulletSpawnTime = 0;
+    lastPrintTime = 0;
+
+    for (int i = 0; i < C_BULLETS_MAX; i++)
+    {
+        bullets[i].active = false;
+        bullets[i].waitingForParry = false;
+        bullets[i].parryStart = 0;
+    }
 }
 
 void Game::spawnBullet()
 {
-    for (int i = 0; i < C_BULLETS_MAX; i++) {
+    for (int i = 0; i < C_BULLETS_MAX; i++)
+    {
 
         if (bullets[i].active)
             continue;
@@ -76,22 +124,26 @@ void Game::spawnBullet()
         float x, y;
 
         // 0 = top
-        if (side == 0) {
+        if (side == 0)
+        {
             x = random(0, C_OLED_WIDTH);
             y = 0;
         }
         // 1 = bottom
-        else if (side == 1) {
+        else if (side == 1)
+        {
             x = random(0, C_OLED_WIDTH);
             y = C_OLED_HEIGHT - 1;
         }
         // 2 = left
-        else if (side == 2) {
+        else if (side == 2)
+        {
             x = 0;
             y = random(0, C_OLED_HEIGHT);
         }
         // 3 = right
-        else {
+        else
+        {
             x = C_OLED_WIDTH - 1;
             y = random(0, C_OLED_HEIGHT);
         }
@@ -117,7 +169,8 @@ void Game::spawnBullet()
 
 void Game::updateBullets()
 {
-    for (int i = 0; i < C_BULLETS_MAX; i++) {
+    for (int i = 0; i < C_BULLETS_MAX; i++)
+    {
 
         Bullet &b = bullets[i];
 
@@ -130,21 +183,27 @@ void Game::updateBullets()
 
         // mimo obrazovku -> vypnout
         if (b.x < 0 || b.x > C_OLED_WIDTH ||
-            b.y < 0 || b.y > C_OLED_HEIGHT) {
+            b.y < 0 || b.y > C_OLED_HEIGHT)
+        {
 
             b.active = false;
         }
     }
 }
 
-void Game::checkCollisions() {
+void Game::checkCollisions()
+{
 
     unsigned long now = millis();
     static unsigned long lastButtonPress = 0;
-    bool buttonPressed = (digitalRead(BTN_1) == HIGH) && (now - lastButtonPress > 50);  // 50ms debounce
-    if (buttonPressed) lastButtonPress = now;
+    bool buttonPressed = (digitalRead(BTN_1) == CHANGE) && (now - lastButtonPress > 50); // 50ms debounce
+    if (buttonPressed)
+    {
+        lastButtonPress = now;
+    }
 
-    for (int i = 0; i < C_BULLETS_MAX; i++) {
+    for (int i = 0; i < C_BULLETS_MAX; i++)
+    {
 
         Bullet &b = bullets[i];
 
@@ -157,13 +216,14 @@ void Game::checkCollisions() {
 
         float dist = sqrt(dx * dx + dy * dy);
 
-        // mimo dosah hráče → nic se neděje
-        if (dist > C_PLAYER_RADIUS)
+        // mimo dosah štítu → nic se neděje
+        if (dist > C_SHIELD_RADIUS + 3) // +3 tolerance
             continue;
 
         // úhel bulletu vůči středu
         float bulletAngle = atan2(dy, dx) * 180.0f / PI;
-        if (bulletAngle < 0) bulletAngle += 360.0f;
+        if (bulletAngle < 0)
+            bulletAngle += 360.0f;
 
         // rozdíl vůči štítu
         float diff = fabs(bulletAngle - player.shieldAngle);
@@ -171,29 +231,48 @@ void Game::checkCollisions() {
             diff = 360.0f - diff;
 
         // Odražení štítem
-        if (diff <= C_SHIELD_HALF_ANGLE) {
-            b.active = false;   // zničená kulka
+        if ((dist < C_SHIELD_RADIUS + 3 && dist > C_SHIELD_RADIUS - 3) && diff <= C_SHIELD_HALF_ANGLE + 3) // +3 tolerance
+        {
+            player.score += C_SCORE_PER_HIT;
+            b.active = false; // zničená kulka
+            b.waitingForParry = false;
             continue;
         }
 
-        // Začátek hit okna
-        if (!b.waitingForParry) {
+        // Začátek hit okna, když kulka dorazí ke štítu
+        if (!b.waitingForParry)
+        {
             b.waitingForParry = true;
             b.parryStart = now;
-            continue;  // Wait one frame before checking button
         }
 
-        // Stiskl včas
-        if (buttonPressed) {
-            player.score++;
+        // Stiskl včas (jen kdyz kulka dorazi k hraci)
+        if (dist <= C_PLAYER_RADIUS + 1 && buttonPressed && (now - b.parryStart <= C_HIT_WINDOW_MS)) // +1 tolerance
+        {
+            buttonPressed = false; // reset button state after processing
+            player.score += C_SCORE_PER_HIT;
             b.active = false;
+            b.waitingForParry = false;
             continue;
         }
 
-        // Nestiskl včas
-        if (now - b.parryStart > C_HIT_WINDOW_MS) {
+        // Nestiskl včas → zásah hráče
+        if (dist <= C_PLAYER_RADIUS + 1 && (now - b.parryStart > C_HIT_WINDOW_MS)) // +1 tolerance
+        {
             player.hp--;
+
+            switch (player.hp)
+            {
+            case 2:
+                led.setColor(255, 255, 0); // žlutá
+                break;
+            case 1:
+                led.setColor(255, 0, 0); // červená
+                break;
+            }
+
             b.active = false;
+            b.waitingForParry = false;
         }
     }
 }
