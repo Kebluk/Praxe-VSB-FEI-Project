@@ -27,11 +27,18 @@ void Game::update()
     {
         oledTested = oled.test();
         rgbLedTested = led.test();
+        if (oledTested)
+        {
+            oled.drawPleaseSpinEncoder();
+        }
         encoderTested = encoder.test();
 
         if (oledTested && rgbLedTested && encoderTested)
         {
             testing = false;
+            oled.clearDisplay();
+            oled.display();
+            Serial.println("All components initialized. Starting game...");
         }
         else
         {
@@ -43,8 +50,9 @@ void Game::update()
     {
     case MENU:
         oled.drawMenu();
-        if (digitalRead(BTN_1) == HIGH)
+        if (digitalRead(BTN_1) == HIGH && (millis() - lastButtonPress > 250)) // 250ms debounce
         {
+            lastButtonPress = millis();
             gameState = PLAYING;
         }
         break;
@@ -78,7 +86,12 @@ void Game::update()
         break;
     case GAME_OVER:
         oled.drawGameOver(player.score);
-        if (digitalRead(BTN_1) == HIGH && (millis() - lastButtonPress > 50)) // 50ms debounce
+        if (!waitedAfterGameOver)
+        {
+            delay(500); // počkej 500 ms před umožněním restartu
+            waitedAfterGameOver = true;
+        }
+        if (digitalRead(BTN_1) == HIGH && (millis() - lastButtonPress > 250)) // 250ms debounce
         {
             lastButtonPress = millis();
             resetGame();
@@ -100,6 +113,7 @@ void Game::resetGame()
     player.shieldAngle = 0;
     lastBulletSpawnTime = 0;
     lastPrintTime = 0;
+    waitedAfterGameOver = false;
 
     for (int i = 0; i < C_BULLETS_MAX; i++)
     {

@@ -17,6 +17,7 @@ public:
     void drawBullets(Bullet bullets[]);
     void drawMenu();
     void drawGameOver(int score);
+    void drawPleaseSpinEncoder();
     /**
      * @brief Draws a shield around the player with a given angle.
      * @param cx The x-coordinate of the center of the shield.

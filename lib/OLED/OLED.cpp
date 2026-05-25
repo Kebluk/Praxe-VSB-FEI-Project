@@ -5,6 +5,12 @@
 #include "Common.hpp"
 #include <Arduino.h>
 
+/**
+ * @brief Gets the width of a line of text when rendered on the display.
+ * @param display The display object to use for measuring the text.
+ * @param text The text to measure.
+ * @return The width of the text in pixels.
+ */
 static uint16_t getLineWidth(Adafruit_SSD1306 &display, const char *text)
 {
     int16_t x1 = 0;
@@ -15,6 +21,12 @@ static uint16_t getLineWidth(Adafruit_SSD1306 &display, const char *text)
     return w;
 }
 
+/**
+ * @brief Draws a single line of text centered horizontally at a specific y-coordinate.
+ * @param display The display object to draw on.
+ * @param text The text to draw.
+ * @param y The y-coordinate at which to draw the text. The text will be centered horizontally at this y-coordinate.
+ */
 static void drawCenteredLineAtY(Adafruit_SSD1306 &display, const char *text, int16_t y)
 {
     uint16_t lineWidth = getLineWidth(display, text);
@@ -23,6 +35,13 @@ static void drawCenteredLineAtY(Adafruit_SSD1306 &display, const char *text, int
     display.print(text);
 }
 
+/**
+ * @brief Draws multiple lines of text centered both horizontally and vertically on the display.
+ * @param display The display object to draw on.
+ * @param lines An array of strings, each representing a line of text to draw.
+ * @param lineCount The number of lines in the lines array.
+ * @param textSize The size of the text. Each line's height will be 8 pixels multiplied by this text size.
+ */
 static void drawCenteredLines(Adafruit_SSD1306 &display, const char *const *lines, int lineCount, int textSize)
 {
     int16_t displayWidth = display.width();
@@ -105,12 +124,22 @@ void OLED::drawGameOver(int score)
     drawCenteredLineAtY(displayObj, "Press button", bottomStartY);
     drawCenteredLineAtY(displayObj, "to restart", bottomStartY + lineHeight);
     displayObj.display();
-    delay(500);
 }
 
 void OLED::drawPlayer()
 {
     displayObj.fillCircle(C_PLAYER_X, C_PLAYER_Y, 3, SSD1306_WHITE);
+}
+
+void OLED::drawPleaseSpinEncoder()
+{
+    displayObj.clearDisplay();
+    int textSize = 1;
+    displayObj.setTextSize(textSize);
+    displayObj.setTextColor(SSD1306_WHITE);
+    const char *lines[] = {"Please spin", "the encoder", "to test it"};
+    drawCenteredLines(displayObj, lines, 3, textSize);
+    displayObj.display();
 }
 
 void OLED::drawShield(int angle)
